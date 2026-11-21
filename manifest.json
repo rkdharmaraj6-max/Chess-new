@@ -1,0 +1,14 @@
+{
+  "name": "தமிழ் செஸ் | Chess Game",
+  "short_name": "தமிழ் செஸ்",
+  "description": "மொபைலில் விளையாடக்கூடிய தமிழ் செஸ் கேம்",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#111b19",
+  "theme_color": "#17231d",
+  "icons": [
+    {"src":"icons/chess-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>தமிழ் செஸ் | Chess Game</title>
+<meta name="theme-color" content="#17231d">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/chess-icon.svg" type="image/svg+xml">
+<style>
+:root{--light:#f0d9b5;--dark:#b58863;--accent:#85a65a;--bg:#111b19;--panel:#1e2b27;--text:#f5f2e9}
+*{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at top,#283a32,#101714 70%);font-family:system-ui,-apple-system,"Noto Sans Tamil",Arial,sans-serif;color:var(--text);display:flex;justify-content:center;padding:16px}
+.wrap{width:min(100%,540px);display:flex;flex-direction:column;gap:14px;align-items:center}.top{text-align:center}.top h1{font-size:1.45rem;margin:4px 0}.top p{margin:0;color:#bdc9c0;font-size:.9rem}
+.info{width:100%;background:var(--panel);border:1px solid #35473e;border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;box-shadow:0 8px 24px #0003}.status{font-weight:700;font-size:1rem}.turn{font-size:.8rem;color:#c4d1c8;white-space:nowrap}
+.board{width:min(94vw,500px);aspect-ratio:1;display:grid;grid-template:repeat(8,1fr)/repeat(8,1fr);border:4px solid #24302b;border-radius:5px;overflow:hidden;box-shadow:0 12px 32px #0006;touch-action:manipulation}.sq{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:clamp(27px,8.5vw,53px);line-height:1;user-select:none}.sq.light{background:var(--light)}.sq.dark{background:var(--dark)}.sq.sel{box-shadow:inset 0 0 0 4px #f5e55a}.sq.legal::after{content:"";position:absolute;width:24%;height:24%;border-radius:50%;background:#425c35aa}.sq.legal.capture::after{width:84%;height:84%;border-radius:50%;background:transparent;border:5px solid #425c35aa}.sq.last{background-image:linear-gradient(#e7ed5a77,#e7ed5a77)}.sq.check{background-image:radial-gradient(circle,#e75a4c,#d8544080 65%,transparent 72%)}
+.piece.white{color:#fff;text-shadow:0 1px 2px #444,0 0 2px #333}.piece.black{color:#171717;text-shadow:0 1px 1px #eee8}.controls{display:flex;gap:10px;width:100%}button{flex:1;border:0;border-radius:12px;padding:12px 10px;font-size:1rem;font-weight:700;color:#fff;background:#536d49;cursor:pointer}button.secondary{background:#33463e}button:active{transform:scale(.98)}.hint{text-align:center;color:#b8c5bd;font-size:.8rem;margin-top:-4px}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:20px}.modal.show{display:flex}.promobox{background:#24352d;border:1px solid #647b68;border-radius:16px;padding:18px;text-align:center;box-shadow:0 20px 60px #0007}.promobox h3{margin:0 0 14px}.promos{display:flex;gap:8px}.promos button{font-size:2rem;min-width:58px;padding:8px;background:#526d4b}
+@media(min-width:520px){body{padding:24px}.sq{font-size:52px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <header class="top"><h1>♟️ தமிழ் செஸ்</h1><p>வெள்ளை vs கருப்பு · முழு செஸ் விதிகள்</p></header>
+ <div class="info"><div id="status" class="status">வெள்ளை காய் நகர்த்தவும்</div><div id="turn" class="turn">வெள்ளை ♙</div></div>
+ <div id="board" class="board" aria-label="Chess board"></div>
+ <div class="controls"><button id="undo" class="secondary">↶ Undo</button><button id="restart">↻ புதிய கேம்</button></div>
+ <div class="hint">காயைத் தொடவும் → நகர்த்த வேண்டிய இடத்தைத் தேர்வு செய்யவும்</div>
+</div>
+<div id="promotion" class="modal"><div class="promobox"><h3>Pawn promotion – காயை தேர்வு செய்க</h3><div class="promos"><button data-piece="q">♕</button><button data-piece="r">♖</button><button data-piece="b">♗</button><button data-piece="n">♘</button></div></div></div>
+<script type="module">
+import { Chess } from 'https://cdn.jsdelivr.net/npm/chess.js@1.4.0/+esm';
+const game=new Chess(); const boardEl=document.getElementById('board'),statusEl=document.getElementById('status'),turnEl=document.getElementById('turn'),promotionEl=document.getElementById('promotion');
+let selected=null,legal=[],lastMove=null,pendingPromotion=null;
+const glyph={wk:'♔',wq:'♕',wr:'♖',wb:'♗',wn:'♘',wp:'♙',bk:'♚',bq:'♛',br:'♜',bb:'♝',bn:'♞',bp:'♟'};
+function render(){boardEl.innerHTML='';const grid=game.board();for(let r=0;r<8;r++)for(let c=0;c<8;c++){const sq=String.fromCharCode(97+c)+(8-r),p=grid[r][c],el=document.createElement('div');el.className='sq '+((r+c)%2?'dark':'light');el.dataset.square=sq;
+ if(selected===sq)el.classList.add('sel');if(legal.some(m=>m.to===sq))el.classList.add('legal',...(p?['capture']:[]));if(lastMove&&(lastMove.from===sq||lastMove.to===sq))el.classList.add('last');
+ if(p){const span=document.createElement('span');span.className='piece '+(p.color==='w'?'white':'black');span.textContent=glyph[p.color+p.type];el.append(span)}
+ if(game.isCheck()&&p&&p.type==='k'&&p.color===game.turn())el.classList.add('check');el.addEventListener('click',()=>clickSquare(sq));boardEl.append(el)}
+ updateStatus();}
+function updateStatus(){const side=game.turn()==='w'?'வெள்ளை':'கருப்பு';turnEl.textContent=side+(game.turn()==='w'?' ♙':' ♟');if(game.isCheckmate())statusEl.textContent='Checkmate! '+(game.turn()==='w'?'கருப்பு':'வெள்ளை')+' வெற்றி 🏆';else if(game.isDraw())statusEl.textContent='Draw – ஆட்டம் சமன்';else statusEl.textContent=game.isCheck()?side+' Check! ⚠️':side+' காய் நகர்த்தவும்';}
+function clickSquare(sq){if(game.isGameOver())return;const moves=selected?legal.filter(m=>m.to===sq):[];if(moves.length){const promo=moves.find(m=>m.promotion);if(promo){pendingPromotion={from:selected,to:sq};promotionEl.classList.add('show');return;}doMove(selected,sq);return}
+ const piece=game.get(sq);if(piece&&piece.color===game.turn()){selected=sq;legal=game.moves({square:sq,verbose:true});}else{selected=null;legal=[];}render();}
+function doMove(from,to,promotion){try{const move=game.move({from,to,...(promotion?{promotion}: {})});if(move)lastMove={from:move.from,to:move.to};}catch(e){}selected=null;legal=[];pendingPromotion=null;promotionEl.classList.remove('show');render();}
+promotionEl.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{if(pendingPromotion)doMove(pendingPromotion.from,pendingPromotion.to,b.dataset.piece)}));
+document.getElementById('restart').addEventListener('click',()=>{game.reset();selected=null;legal=[];lastMove=null;render();});document.getElementById('undo').addEventListener('click',()=>{game.undo();selected=null;legal=[];lastMove=game.history({verbose:true}).slice(-1)[0]||null;render();});render();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(console.error));}</script>
+</body>
+</html>
